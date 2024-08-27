@@ -1,0 +1,227 @@
+--------- Repeatable Read ---------
+
+*** lost update ***
+__Transaction 1__
+1 set session transaction isolation level repeatable read;
+3 start transaction;
+5 select * from balance where id = 1;
+7 update balance set balance = balance + 10 where id = 1;
+9 commit; -- update successful
+__Transaction 2__
+2 set session transaction isolation level repeatable read;
+4 start transaction;
+6 select * from balance where id = 1;
+8 update balance set balance = balance - 20 where id = 1; -- waits for other transaction to commit, and when it commits - applies the update
+10 commit; -- update successful
+
+*** dirty read ***
+1 set session transaction isolation level repeatable read ;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1;
+8 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level repeatable read ;
+4 start transaction;
+5 select * from balance where id = 1;
+7 select * from balance where id = 1; -- same result as previous (update from other transaction not commited yet)
+9 commit;
+
+*** non-repeatable read ***
+__Transaction 1__
+1 set session transaction isolation level repeatable read ;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1;
+7 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level repeatable read ;
+4 start transaction;
+5 select * from balance where id = 1;
+8 select * from balance where id = 1; -- same result as previous (update from other transaction commited)
+9 commit;
+
+
+*** phantom read ***
+__Transaction 1__
+1 set session transaction isolation level repeatable read ;
+2 start transaction;
+6 insert into balance (balance) values (210);
+7 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level repeatable read ;
+4 start transaction;
+5 select * from balance where balance > 200;
+8 select * from balance where balance > 200; -- see the same result as previous
+9 commit;
+
+
+
+--------- Read Uncommited ---------
+
+*** lost update ***
+__Transaction 1__
+1 set session transaction isolation level read uncommited;
+3 start transaction;
+5 select * from balance where id = 1;
+7 update balance set balance = balance + 10 where id = 1;
+9 commit; -- update successful
+__Transaction 2__
+2 set session transaction isolation level read uncommited;
+4 start transaction;
+6 select * from balance where id = 1;
+8 update balance set balance = balance - 20 where id = 1; -- waits for other transaction to commit, and when it commits - applies the update
+10 commit; -- update successful
+
+
+*** dirty read ***
+1 set session transaction isolation level read uncommited;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1;
+8 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level read uncommited;
+4 start transaction;
+5 select * from balance where id = 1;
+7 select * from balance where id = 1; -- see result of other transaction (update from other transaction not commited yet)
+9 commit;
+
+*** non-repeatable read ***
+__Transaction 1__
+1 set session transaction isolation level read uncommitted ;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1;
+7 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level read uncommitted ;
+4 start transaction;
+5 select * from balance where id = 1;
+8 select * from balance where id = 1; -- see result of other transaction (update from other transaction commited)
+9 commit;
+
+*** phantom read ***
+1 set session transaction isolation read uncommitted ;
+2 start transaction;
+6 insert into balance (balance) values (210);
+7 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level read uncommitted ;
+4 start transaction;
+5 select * from balance where balance > 200;
+8 select * from balance where balance > 200; -- see + 1 (phantom) in the result set
+9 commit;
+
+
+
+--------- Read Commited ---------
+
+*** lost update ***
+__Transaction 1__
+1 set session transaction isolation level read commited;
+3 start transaction;
+5 select * from balance where id = 1;
+7 update balance set balance = balance + 10 where id = 1;
+9 commit; -- update successful
+__Transaction 2__
+2 set session transaction isolation level read commited;
+4 start transaction;
+6 select * from balance where id = 1;
+8 update balance set balance = balance - 20 where id = 1; -- waits for other transaction to commit, and when it commits - applies the update
+10 commit; -- update successful
+
+
+*** dirty read ***
+1 set session transaction isolation level read commited;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1;
+8 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level read commited;
+4 start transaction;
+5 select * from balance where id = 1;
+7 select * from balance where id = 1; -- same result as previous (update from other transaction not commited yet)
+9 commit;
+
+
+*** non-repeatable read ***
+__Transaction 1__
+1 set session transaction isolation level read committed ;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1;
+7 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level read committed ;
+4 start transaction;
+5 select * from balance where id = 1;
+8 select * from balance where id = 1; -- see result of other transaction (update from other transaction commited)
+9 commit;
+
+
+*** phantom read ***
+__Transaction 1__
+1 set session transaction isolation read committed ;
+2 start transaction;
+6 insert into balance (balance) values (210);
+7 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level read committed ;
+4 start transaction;
+5 select * from balance where balance > 200;
+8 select * from balance where balance > 200; -- see + 1 (phantom) in the result set
+9 commit;
+
+
+
+--------- Serializable ---------
+
+*** lost update ***
+1 set session transaction isolation level serializable;
+3 start transaction;
+5 select * from balance where id = 1;
+7 update balance set balance = balance + 10 where id = 1; -- starts waiting for the other transaction to commit
+9 commit; -- update successful
+__Transaction 2__
+2 set session transaction isolation level serializable;
+4 start transaction;
+6 select * from balance where id = 1;
+8 update balance set balance = balance - 20 where id = 1; -- deadlock
+10 commit; -- update unsuccessful
+
+
+*** dirty read ***
+__Transaction 1__
+1 set session transaction isolation level serializable ;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1; -- waits for other transaction to finish
+8 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level serializable ;
+4 start transaction;
+5 select * from balance where id = 1;
+7 select * from balance where id = 1; -- same result as previous
+9 commit;
+
+*** non-repeatable read ***
+__Transaction 1__
+1 set session transaction isolation level serializable ;
+2 start transaction;
+6 update balance set balance = balance + 10 where id = 1; -- starts waiting for the other transaction
+9 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level serializable ;
+4 start transaction;
+5 select * from balance where id = 1;
+7 select * from balance where id = 1; -- same result as previous
+8 commit;
+
+
+*** phantom read ***
+__Transaction 1__
+1 set session transaction isolation level serializable ;
+2 start transaction;
+6 insert into balance (balance) values (210); -- starts waiting for other transaction
+9 commit; -- update successful
+__Transaction 2__
+3 set session transaction isolation level serializable ;
+4 start transaction;
+5 select * from balance where balance > 200;
+7 select * from balance where balance > 200; -- see the same result as previous
+8 commit;

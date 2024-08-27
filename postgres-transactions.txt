@@ -1,0 +1,192 @@
+--------- Repeatable Read ---------
+
+*** lost update ***
+__Transaction 1__
+1 begin transaction isolation level repeatable read;
+3 select * from balance where id = 1;
+5 update balance set balance = balance + 50 where id = 1;
+7 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level repeatable read;
+4 select * from balance where id = 1;
+6 update balance set balance = balance - 20 where id = 1; -- starts waiting for the other transaction to commit, but when it commits throws "[40001] ERROR: could not serialize access due to concurrent update"
+8 commit; -- update was not applied
+
+*** dirty read ***
+__Transaction 1__
+1 begin transaction isolation level repeatable read;
+3 select * from balance where id = 1;
+5 update balance set balance = balance + 50 where id = 1;
+7 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level repeatable read;
+4 select * from balance where id = 1;
+6 select * from balance where id = 1; -- still returns the same value as previously even after update from other transaction (not yet commited)
+8 commit;
+
+*** non-repeatable read ***
+__Transaction 1__
+1 begin transaction isolation level repeatable read;
+3 update balance set balance = balance + 50 where id = 1;
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level repeatable read;
+4 select * from balance where id = 1;
+6 select * from balance where id = 1; -- still returns the same value as previously even after update from other transaction (already commited)
+7 commit;
+
+*** phantom read ***
+__Transaction 1__
+1 begin transaction isolation level repeatable read;
+3 insert into balance (balance) values (120);
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level repeatable read;
+4 select * from balance where balance > 100;
+6 select * from balance where balance > 100; -- still see the same resultset (no phantom row)
+7 commit;
+
+
+--------- Read Uncommited ---------
+
+*** lost update ***
+__Transaction 1__
+1 begin transaction isolation level read uncommitted;
+3 select * from balance where id = 1;
+5 update balance set balance = balance + 50 where id = 1;
+7 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read uncommitted;
+4 select * from balance where id = 1;
+6 update balance set balance = balance - 20 where id = 1; -- starts waiting for the other transaction to commit, and when it commits applies the update to the result of the other transaction
+8 commit; -- update was not applied
+
+*** dirty read ***
+__Transaction 1__
+1 begin transaction isolation level read uncommitted;
+4 update balance set balance = balance + 50 where id = 1;
+6 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read uncommitted ;
+3 select * from balance where id = 1;
+5 select * from balance where id = 1; -- still returns the same value as previously even after update from other transaction (not yet commited)
+7 commit;
+
+*** non-repeatable read ***
+__Transaction 1__
+1 begin transaction isolation level read uncommitted;
+4 update balance set balance = balance + 50 where id = 1;
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read uncommitted;
+3 select * from balance where id = 1;
+6 select * from balance where id = 1; -- see the new value after the other transaction was commited
+7 commit;
+
+*** phantom read ***
+__Transaction 1__
+1 begin transaction isolation level repeatable read;
+3 insert into balance (balance) values (120);
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read uncommitted;
+4 select * from balance where balance > 100;
+6 select * from balance where balance > 100; -- see the same resultset as previously + the new "phantom" record
+7 commit;
+
+
+--------- Read Commited ---------
+
+*** lost update ***
+__Transaction 1__
+1 begin transaction isolation level read committed;
+3 select * from balance where id = 1;
+5 update balance set balance = balance + 50 where id = 1;
+7 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read committed;
+4 select * from balance where id = 1;
+6 update balance set balance = balance - 20 where id = 1; -- starts waiting for the other transaction to commit, and when it commits applies the update to the result of the other transaction
+8 commit; -- update was not applied
+
+*** dirty read ***
+__Transaction 1__
+1 begin transaction isolation level read uncommitted;
+4 update balance set balance = balance + 50 where id = 1;
+6 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read uncommitted ;
+3 select * from balance where id = 1;
+5 select * from balance where id = 1; -- still returns the same value as previously even after update from other transaction (not yet commited)
+7 commit;
+
+*** non-repeatable read ***
+__Transaction 1__
+1 begin transaction isolation level read uncommitted;
+4 update balance set balance = balance + 50 where id = 1;
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read uncommitted;
+3 select * from balance where id = 1;
+6 select * from balance where id = 1; -- see the new value after the other transaction was commited
+7 commit;
+
+*** phantom read ***
+__Transaction 1__
+1 begin transaction isolation level repeatable read;
+3 insert into balance (balance) values (120);
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level read uncommitted;
+4 select * from balance where balance > 100;
+6 select * from balance where balance > 100; -- see the same resultset as previously + the new "phantom" record
+7 commit;
+
+
+--------- Serializable ---------
+
+*** lost update ***
+__Transaction 1__
+1 begin transaction isolation level serializable;
+3 select * from balance where id = 1;
+5 update balance set balance = balance + 50 where id = 1;
+7 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level serializable;
+4 select * from balance where id = 1;
+6 update balance set balance = balance - 20 where id = 1; -- starts waiting for the other transaction to commit, but when it commits throws "[40001] ERROR: could not serialize access due to concurrent update"
+8 commit; -- update was not applied
+
+*** dirty read ***
+__Transaction 1__
+1 begin transaction isolation level serializable;
+3 select * from balance where id = 1;
+5 update balance set balance = balance + 50 where id = 1;
+7 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level serializable;
+4 select * from balance where id = 1;
+6 select * from balance where id = 1; -- still returns the same value as previously even after update from other transaction (not yet commited)
+8 commit;
+
+*** non-repeatable read ***
+__Transaction 1__
+1 begin transaction isolation level serializable;
+3 update balance set balance = balance + 50 where id = 1;
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level serializable;
+4 select * from balance where id = 1;
+6 select * from balance where id = 1; -- still returns the same value as previously even after update from other transaction (already commited)
+7 commit;
+
+*** phantom read ***
+__Transaction 1__
+1 begin transaction isolation level serializable;
+3 insert into balance (balance) values (120);
+5 commit; -- update was applied
+__Transaction 2__
+2 begin transaction isolation level serializable;
+4 select * from balance where balance > 100;
+6 select * from balance where balance > 100; -- still see the same resultset (no phantom row)
+7 commit;

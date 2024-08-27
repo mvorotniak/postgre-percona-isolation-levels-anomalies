@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bank_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-postgre.sql:/docker-entrypoint-initdb.d/init.sql
+  percona:
+    image: percona:latest
+    container_name: percona
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: bank_database
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    command: >
+      --default-storage-engine=InnoDB
+      --innodb-status-output=ON
+      --innodb-status-output-locks=ON
+    ports:
+      - "3306:3306"
+    volumes:
+      - percona_data:/var/lib/mysql
+      - ./init-percona.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  postgres_data:
+  percona_data:
