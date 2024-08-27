@@ -1,7 +1,7 @@
-# Transactions and isolation and Transactional Anomalies
+# Isolation levels and Transactional Anomalies
 
 ### Storage Engines
- - PostgreSQL supports and uses just only one storage engine - PostgreSQL
+ - PostgreSQL supports and uses only one storage engine - PostgreSQL
  - Percona supports several storage engines. InnoDB is used in our testing
 
 ### Instructions
